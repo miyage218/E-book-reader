@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="tr" data-theme="paper">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <title>Okuyucu</title>
+  <meta name="description" content="Kindle benzeri, göz yormayan PDF kitap okuyucu">
+  <meta name="theme-color" content="#f4f1ea">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Okuyucu">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ============ KİTAPLIK ============ -->
+<section id="library" class="view">
+  <header class="lib-head">
+    <h1>Kitaplığım</h1>
+    <div class="lib-actions">
+      <button class="icon-btn" id="libTheme" aria-label="Tema">
+        <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/></svg>
+      </button>
+      <label class="add-btn" aria-label="PDF ekle">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        <span>PDF ekle</span>
+        <input type="file" id="fileInput" accept="application/pdf,.pdf" multiple hidden>
+      </label>
+    </div>
+  </header>
+
+  <div id="continue"></div>
+
+  <div class="lib-sub" id="libSub"></div>
+  <ul id="bookList" class="book-list"></ul>
+
+  <div id="empty" class="empty" hidden>
+    <svg viewBox="0 0 48 48"><path d="M8 8h13a5 5 0 0 1 5 5v27a4 4 0 0 0-4-4H8zM40 8H27a5 5 0 0 0-5 5v27a4 4 0 0 1 4-4h14z"/></svg>
+    <p>Kitaplığınız boş.</p>
+    <p class="muted">Başlamak için <b>PDF ekle</b> düğmesine dokunun.<br>Birden fazla dosyayı aynı anda seçebilirsiniz.</p>
+  </div>
+
+  <footer class="lib-foot" id="storageInfo"></footer>
+</section>
+
+<!-- ============ OKUYUCU ============ -->
+<section id="reader" class="view" hidden>
+  <!-- metin (yeniden akışlı) görünüm -->
+  <div id="pageview"><div id="flow"></div></div>
+  <!-- orijinal sayfa görünümü -->
+  <div id="pdfview" hidden><canvas id="pdfCanvas"></canvas></div>
+
+  <div id="tapzone"></div>
+
+  <footer id="rfoot">
+    <span id="fPct">%0</span>
+    <span id="fPage"></span>
+    <span id="fLeft"></span>
+    <div id="fBar"><i></i></div>
+  </footer>
+
+  <!-- menü -->
+  <div id="menuTop" class="menu-bar" hidden>
+    <button class="icon-btn" id="btnBack" aria-label="Kitaplık">
+      <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <div class="menu-title" id="mTitle"></div>
+    <button class="icon-btn" id="btnToc" aria-label="İçindekiler">
+      <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+    </button>
+    <button class="icon-btn txt" id="btnAa" aria-label="Görünüm ayarları">Aa</button>
+  </div>
+  <div id="menuBottom" class="menu-bar bottom" hidden>
+    <div class="slider-row">
+      <input type="range" id="slider" min="1" max="1" value="1">
+    </div>
+    <div class="slider-label" id="sliderLabel"></div>
+  </div>
+
+  <div id="loading" class="loading" hidden>
+    <div class="spinner"></div>
+    <p id="loadingText">Açılıyor…</p>
+    <div class="lbar"><i id="loadingBar"></i></div>
+  </div>
+</section>
+
+<!-- Ayarlar -->
+<div id="sheetAa" class="sheet" hidden>
+  <div class="sheet-grip"></div>
+  <div class="set-row">
+    <span class="set-label">Görünüm</span>
+    <div class="seg" data-key="mode">
+      <button data-v="text">Metin</button>
+      <button data-v="page">Orijinal sayfa</button>
+    </div>
+  </div>
+  <div class="set-row text-only">
+    <span class="set-label">Yazı tipi</span>
+    <div class="seg" data-key="font">
+      <button data-v="literata" style="font-family:Literata,serif">Literata</button>
+      <button data-v="georgia" style="font-family:Georgia,serif">Georgia</button>
+      <button data-v="sans" style="font-family:system-ui,sans-serif">Sade</button>
+    </div>
+  </div>
+  <div class="set-row text-only">
+    <span class="set-label">Boyut</span>
+    <div class="stepper">
+      <button id="fsMinus" aria-label="Küçült"><span style="font-size:14px">A</span></button>
+      <span id="fsVal"></span>
+      <button id="fsPlus" aria-label="Büyüt"><span style="font-size:22px">A</span></button>
+    </div>
+  </div>
+  <div class="set-row text-only">
+    <span class="set-label">Satır aralığı</span>
+    <div class="seg" data-key="lh">
+      <button data-v="1.4">Dar</button>
+      <button data-v="1.6">Orta</button>
+      <button data-v="1.85">Geniş</button>
+    </div>
+  </div>
+  <div class="set-row text-only">
+    <span class="set-label">Kenar boşluğu</span>
+    <div class="seg" data-key="margin">
+      <button data-v="sm">Dar</button>
+      <button data-v="md">Orta</button>
+      <button data-v="lg">Geniş</button>
+    </div>
+  </div>
+  <div class="set-row text-only">
+    <span class="set-label">Hizalama</span>
+    <div class="seg" data-key="justify">
+      <button data-v="true">İki yana</button>
+      <button data-v="false">Sola</button>
+    </div>
+  </div>
+  <div class="set-row">
+    <span class="set-label">Tema</span>
+    <div class="themes" data-key="theme">
+      <button data-v="white" class="sw sw-white" aria-label="Beyaz">Aa</button>
+      <button data-v="paper" class="sw sw-paper" aria-label="Kağıt">Aa</button>
+      <button data-v="sepia" class="sw sw-sepia" aria-label="Sepya">Aa</button>
+      <button data-v="dark" class="sw sw-dark" aria-label="Gece">Aa</button>
+    </div>
+  </div>
+</div>
+
+<!-- İçindekiler -->
+<div id="sheetToc" class="sheet tall" hidden>
+  <div class="sheet-grip"></div>
+  <h2>İçindekiler</h2>
+  <ul id="tocList" class="toc"></ul>
+</div>
+
+
+<!-- Kitap işlemleri -->
+<div id="actionSheet" class="sheet action" hidden>
+  <div class="sheet-grip"></div>
+  <h2 id="asTitle"></h2>
+  <button data-act="rename">Yeniden adlandır</button>
+  <button data-act="reset">Baştan başla</button>
+  <button data-act="delete" class="danger">Kitaplıktan sil</button>
+  <button data-act="cancel" class="cancel">Vazgeç</button>
+</div>
+
+<div id="scrim" hidden></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="lib/pdf.min.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
